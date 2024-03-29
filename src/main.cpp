@@ -1,63 +1,45 @@
+#include <SDL2/SDL.h>
 #include <stdio.h>
-#include <stdbool.h>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include <iostream>
 
-#define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
-#include "SDL2/SDL_mixer.h"
+//Screen dimension constants
+const int SCREEN_WIDTH = 640;
+const int SCREEN_HEIGHT = 480;
 
-using namespace std;
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-
-int main(int argc, char *argv[]) {
-
-    // setup sdl2 with opengl
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-
-    // initialize SDL
-	if (SDL_Init(SDL_INIT_EVERYTHING) < 0) {
-        cout << "SDL could not initialize! SDL ERROR: " << SDL_GetError() << endl;
-        exit(1);
-	}
-	//                       (title, xpos, ypos, width, height, flags);
-	SDL_Window* window = SDL_CreateWindow("Game Engine", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
-	if (!window) {
-        printf("failed to init window: %s!\n", SDL_GetError());
-        exit(1);
-	}
-
-    // Load OpenGL
-    SDL_GL_CreateContext(window);
-    if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
-        printf("failed to load Gl: %s\n", SDL_GetError());
-        exit(1);
-    }
-
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-	if (!renderer) {
-        printf("failed to init renderer: %s!\n", SDL_GetError());
-	}
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND); // enable alpha blending
-
-	//Initialize SDL_mixer
-	if (Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0) {
-        printf( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
-        exit(1);
-    }
-    //loadSound(); // load sound files
-
-
-    puts("OpenGL Loaded");
-    printf("Vendor:     %s\n", glGetString(GL_VENDOR));
-    printf("Renderer:   %s\n", glGetString(GL_RENDERER));
-    printf("Version:    %s\n", glGetString(GL_VERSION));
+// global variables
+//The window we'll be rendering to
+SDL_Window* gWindow = NULL;
     
+//The surface contained by the window
+SDL_Surface* gScreenSurface = NULL;
+
+//The image we will load and show on the screen
+SDL_Surface* helloWorld = NULL;
+
+bool init();
+SDL_Surface* loadMedia();
+void deallocMedia(SDL_Surface* _surface);
+void close();
+
+
+int main(int argc, char* args[]) {
+
+    if (!init()) {
+        printf("init failed!");
+        exit(1);
+    }
+
+    //Fill the surface white
+    SDL_FillRect(gScreenSurface, NULL, SDL_MapRGB(gScreenSurface->format, 0xFF, 0xFF, 0xFF));
+    
+    //The image we will load and show on the screen
+    SDL_Surface* helloWorld = loadMedia();
+
+    //Apply the image
+    SDL_BlitSurface(helloWorld, NULL, gScreenSurface, NULL);
+
+    //Update the surface, only call when render back buffer is done (ie frame is finished)
+    SDL_UpdateWindowSurface(gWindow);
 
     // main game loop
     bool isRunning = true;
@@ -68,7 +50,7 @@ int main(int argc, char *argv[]) {
             switch(event.type) {
                 case SDL_QUIT: {
                     isRunning = false;
-                    break;                 
+                    break;
                 } case SDL_MOUSEMOTION: {
                     break;
                 } case SDL_MOUSEBUTTONDOWN: {
@@ -80,74 +62,65 @@ int main(int argc, char *argv[]) {
                 } case SDL_KEYDOWN: {
                     break;
                 } case SDL_SCANCODE_ESCAPE: {
+                    isRunning = false;
                     break;
                 } default: {
                     break;
                 }
             } // switch
-	    } // poll event
-    } // main loop    
-    puts("exited game engine");
+        } // poll event
+    } // main loop
 
+
+    deallocMedia(helloWorld); // TODO add me to close()
+    close();
+
+    puts("exited game engine");
     return 0;
 } // main
 
-// glfw: whenever the window size changed (by OS or user resize) this callback function executes
-void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-    // make sure the viewport matches the new window dimensions; note that width
-    // and height will be significantly larger than specified on retina displays
-    glViewport(0, 0, width, height);
+
+// modifies global state gWindow, gScreenSurface
+// inits SDL, creates window, assigns window to surface
+bool init() {
+    //Initialize SDL
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        printf("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        return false;
+    }
+    //Create window
+    gWindow = SDL_CreateWindow("SDL Tutorial", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+    if (gWindow == NULL) {
+        printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
+        return false;
+    }
+    //Get window surface
+    gScreenSurface = SDL_GetWindowSurface(gWindow);
+    return true; 
 }
 
-/*
-    // open GL sample code
-
-    GLFWwindow* window;
-
-    // Initialize the library
-    if(!glfwInit())
-        return -1;
-
-    // Define version and compatibility settings
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-    // Create a windowed mode window and its OpenGL context
-    window = glfwCreateWindow(640, 480, "Hello World", NULL, NULL);
-    if (!window)
-    {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        return -1;
+SDL_Surface* loadMedia() {
+    //Load splash image
+    SDL_Surface* ret = SDL_LoadBMP("assets/helloWorld.bmp");
+    if(ret == NULL) {
+        printf("Unable to load image %s! SDL Error: %s\n", "assets/helloWorld.bmp", SDL_GetError());
+        return NULL;
     }
+    return ret;
+}
 
-    // Mathe the window's context current
-    glfwMakeContextCurrent(window);
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+void deallocMedia(SDL_Surface* _surface) {
+    //Deallocate surface
+    SDL_FreeSurface(_surface);
+    _surface = NULL;
+}
 
-    // Initialize the OpenGL API with GLAD
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        return -1;
-    }
+void close() {
+    //Destroy window
+    SDL_DestroyWindow( gWindow );
+    gWindow = NULL;
 
-    // Loop until the user closes the window
-    while(!glfwWindowShouldClose(window))
-    {
-        // Render here!
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        // Swap front and back buffers
-        glfwSwapBuffers(window);
-
-        // Poll for and process events
-        glfwPollEvents();
-    }
-
-    glfwTerminate();
-    return 0;
-*/
+    //Quit SDL subsystems
+    SDL_Quit();
+}
 

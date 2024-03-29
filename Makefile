@@ -1,13 +1,13 @@
 CC = g++
 CFLAGS = -std=gnu++11
-SRCS = src/constants.hpp src/utils.hpp src/main.cpp src/Game.cpp src/Game.hpp src/Enemy.hpp src/Enemy.cpp src/PotionSlot.hpp src/PotionSlot.cpp src/Cauldron.hpp src/Cauldron.cpp src/LevelDesigner.hpp
+SRCS = src/main.cpp src/types.hpp src/util.hpp
 PROG = game
 
-SDL2 = -I include -L lib -l SDL2-2.0.0 -l SDL2 -l SDL2main -l SDL2_image -l SDL2_mixer -l glfw
+SDL2 = -I include -L lib -l SDL2-2.0.0 -l SDL2 -l SDL2main -l SDL2_image -l SDL2_mixer
 LIBS = $(SDL2)
 
-build: src/main.cpp src/glad.c
-	$(CC) $(CFLAGS) src/main.cpp src/glad.c $(LIBS)
+build: $(SRCS)
+	$(CC) $(CFLAGS) $(SRCS) $(LIBS)
 	./a.out
 
 $(PROG): $(SRCS)
