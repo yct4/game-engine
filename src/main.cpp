@@ -14,6 +14,7 @@ SDL_Window* gWindow = NULL;
     
 //The surface contained by the window
 SDL_Surface* gScreenSurface = NULL;
+SDL_Surface* gStretchedSurface = NULL;
 
 //The images that correspond to a keypress
 SDL_Surface* gKeyPressSurfaces[KEY_PRESS_SURFACE_TOTAL];
@@ -104,6 +105,10 @@ int main(int argc, char* args[]) {
             } // switch
         } // poll event
 
+        // Apply image stretched
+        SDL_Rect stretchRect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
+        //SDL_BlitScaled(gStretchedSurface, NULL, gScreenSurface, &stretchRect); TODO use me instead of BlitSurface
+
         // update screen surface with current surface
         SDL_BlitSurface(currentSurface, NULL, gScreenSurface, NULL);
         //Update the surface, only call when render back buffer is done (ie frame is finished)
@@ -150,16 +155,33 @@ bool loadGlobalMedia() {
         }
     
     }
+
+    //Load stretching surface
+    gStretchedSurface = loadSurfaceFromBmp("assets/stretch.bmp");
+    if (gStretchedSurface == NULL) {
+    	printf("Failed to load stretching image!\n");
+    	return false;
+    }    
     return true;
 }
 
-SDL_Surface* loadSurfaceFromBmp(string path) {
+SDL_Surface* loadSurfaceFromBmp(string path) { // TODO pass gScreenSurface as input?
     //Load image at specified path
     SDL_Surface* loadedSurface = SDL_LoadBMP(path.c_str());
     if (loadedSurface == NULL) {
         printf("Unable to load image %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
+        return NULL;
     }
-    return loadedSurface;
+    //Convert surface to screen format
+    SDL_Surface* optimizedSurface = SDL_ConvertSurface(loadedSurface, gScreenSurface->format, 0);
+    if (optimizedSurface == NULL) {
+    	printf("Unable to optimize image %s! SDL Error: %s\n", path.c_str(), SDL_GetError());
+        return NULL;
+    }
+    
+    //Get rid of old loaded surface
+    SDL_FreeSurface(loadedSurface);    
+    return optimizedSurface;
 }
 
 
@@ -174,6 +196,10 @@ void deallocMedia(SDL_Surface* _surface) {
 }
 
 void close() {
+	//Free loaded image
+	SDL_FreeSurface( gStretchedSurface );
+	gStretchedSurface = NULL;
+
     //Destroy window
     SDL_DestroyWindow(gWindow);
     gWindow = NULL;
